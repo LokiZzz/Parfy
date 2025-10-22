@@ -1,13 +1,5 @@
 ﻿using Parfy.Model;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Parfy
 {
@@ -36,15 +28,23 @@ namespace Parfy
 
             foreach (string note in notes)
             {
-                KeyValuePair<string, List<Component>> foundComponent = new(note, []);
+                List<ComponentEntry> foundComponents = [];
 
                 foreach (Component component in sourceComponents)
                 {
                     if(ComponentHasFuzzyEntries(component, note, out List<string> entries))
                     {
-                        foundComponent.Value.Add(component);
+                        foundComponents.Add(
+                            new ComponentEntry 
+                            {
+                                Entries = entries,
+                                FoundComponent = component
+                            }
+                        );
                     }
                 }
+
+                result.NoteToComponents.Add(note, foundComponents);
             }
 
             return result;
@@ -156,7 +156,7 @@ namespace Parfy
         /// <summary>
         /// Список компонентов для каждой перечисленной ноты.
         /// </summary>
-        public Dictionary<string, List<Component>> NoteToComponents { get; set; } = [];
+        public Dictionary<string, List<ComponentEntry>> NoteToComponents { get; set; } = [];
 
         /// <summary>
         /// При поиске компонентов в описании могут быть указаны другие компоненты, с которыми у источника синергия.
@@ -166,10 +166,19 @@ namespace Parfy
         public Dictionary<int, List<Synergy>> Synergies { get; set; } = [];
     }
 
+    public class ComponentEntry
+    {
+        public Component FoundComponent { get; set; } = new();
+
+        public List<string> Entries { get; set; } = [];
+    }
+
     public class Synergy
     {
         public Component SourceComponent { get; set; } = new();
 
         public Component SynergyComponents { get; set; } = new();
+
+        public List<string> Entries { get; set; } = [];
     }
 }

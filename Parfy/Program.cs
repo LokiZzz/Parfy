@@ -18,7 +18,7 @@ update.SetAction(async parseResult =>
 {
     ParfclubScaner scaner = new (console);
     List<Component> components = await scaner.Scan();
-    new CsvGenerator(console).Generate(components, parseResult.GetValue(updateOut)!);
+    new CsvProcessor(console).GenerateParfy(components, parseResult.GetValue(updateOut)!);
 });
 
 Command analyse = new("analyse", "Проанализировать список нот.");

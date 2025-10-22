@@ -3,11 +3,16 @@ using System.Text;
 
 namespace Parfy
 {
-    public class CsvGenerator(IConsole console)
+    public class CsvProcessor(IConsole console)
     {
-        public void Generate(List<Component> components, DirectoryInfo outputDirectory)
+        public void GenerateParfy(List<Component> components, DirectoryInfo outputDirectory)
         {
-            StringBuilder sb = new("Название вещества (RUS);Название вещества (ENG);Описание;Короткое описание;Ссылка");
+            StringBuilder sb = new(
+                "Название вещества (RUS);" +
+                "Название вещества (ENG);" +
+                "Описание;" +
+                "Короткое описание;" +
+                "Ссылка");
 
             foreach (Component component in components)
             {
