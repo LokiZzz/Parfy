@@ -1,13 +1,17 @@
 ﻿using FuzzySharp;
 using FuzzySharp.Extractor;
+using FuzzySharp.SimilarityRatio;
+using FuzzySharp.SimilarityRatio.Scorer.StrategySensitive;
 using Parfy.Model;
+using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Parfy
 {
-    public class NotesToComponentsAnalyser(IConsole console)
+    public partial class NotesToComponentsAnalyser(IConsole console)
     {
-        private readonly int _fuzzyWeightTreshold = 60;
-        private readonly int _fuzzyWeightWindowTreshold = 60;
+        private readonly int _fuzzyWeightTreshold = 65;
+        private readonly int _fuzzyWeightWindowTreshold = 80;
 
         /// <summary>
         /// Найти подходящие вещества
@@ -78,7 +82,7 @@ namespace Parfy
                 {
                     if (TryToFindSynergy(baseComponent, synergyCandidate, out string entry, out int weight))
                     {
-                        console.WriteLine($"Найдена синергия: {synergyCandidate}");
+                        console.WriteLine($"Найдена синергия: {synergyCandidate.NameENG}");
                         console.WriteLine($"Вхождение: {entry}, вес вхождения: {weight}");
 
                         synergies.Add(
@@ -130,10 +134,10 @@ namespace Parfy
 
             IEnumerable<string> textWords = SplitByWords(largeText);
 
-            int windowSize = SplitByWords(targetPhrase).Count() + 2;
+            int windowSize = SplitByWords(targetPhrase).Count() + 1;
 
             // Создаем фразы скользящим окном
-            List<string> phrases = new();
+            List<string> phrases = [];
 
             for (int i = 0; i <= textWords.Count() - windowSize; i++)
             {
@@ -142,10 +146,13 @@ namespace Parfy
             }
 
             // Ищем наилучшее соответствие
-            ExtractedResult<string> result = Process.ExtractOne(targetPhrase, phrases);
+            var result = Process.ExtractOne(
+                targetPhrase.ToLower(),
+                [.. phrases.Select(x => x.ToLower())],
+                scorer: ScorerCache.Get<PartialRatioScorer>());
 
             // Проверяем, достаточно ли высокий балл
-            if (result.Score > _fuzzyWeightWindowTreshold)
+            if (result?.Score > _fuzzyWeightWindowTreshold)
             {
                 entry = result.Value;
                 weight = result.Score;
@@ -256,41 +263,12 @@ namespace Parfy
 
         private IEnumerable<string> SplitByWords(string input)
         {
-            return input.Split([' ', ',', '.', '!', '?', ';', ':', '\n', '\r', '\t'])
-                .Select(x => x.Trim());
+            return input.Split(
+                    [' ', ',', '.', '!', '?', ';', ':', '\n', '\r', '\t'],
+                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
-    }
 
-    public class NotesToComponentsAnalysis
-    {
-        /// <summary>
-        /// Список компонентов для каждой перечисленной ноты.
-        /// </summary>
-        public Dictionary<string, List<АppropriateComponent>> NoteToComponents { get; set; } = [];
-
-        /// <summary>
-        /// При поиске компонентов в описании могут быть указаны другие компоненты, с которыми у источника синергия.
-        /// У них в свою очередь тоже могут быть указаны синергии. 
-        /// Ключ-параметр указывает сколько раз был проведён поиск синергий, то есть на уровень поиска синергий.
-        /// </summary>
-        public Dictionary<int, List<Synergy>> Synergies { get; set; } = [];
-    }
-
-    public class АppropriateComponent
-    {
-        public Component FoundComponent { get; set; } = new();
-
-        public List<string> Entries { get; set; } = [];
-    }
-
-    public class Synergy
-    {
-        public Component Source { get; set; } = new();
-
-        public Component Synergent { get; set; } = new();
-
-        public string Entry { get; set; } = string.Empty;
-
-        public int Weight { get; set; }
+        [GeneratedRegex(@"[^а-яёА-ЯЁ]")]
+        private static partial Regex OnlyLetters();
     }
 }

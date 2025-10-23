@@ -13,10 +13,10 @@ namespace Parfy
                 "Описание;" +
                 "Короткое описание;" +
                 "Ссылка");
+            sb.AppendLine();
 
             foreach (Component component in components)
             {
-                sb.AppendLine();
                 sb.AppendLine(
                     $"{EscapeForCsv(component.NameRUS)};" +
                     $"{EscapeForCsv(component.NameENG)};" +
