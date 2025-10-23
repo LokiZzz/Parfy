@@ -1,7 +1,4 @@
 ﻿using FuzzySharp;
-using FuzzySharp.Extractor;
-using FuzzySharp.SimilarityRatio;
-using FuzzySharp.SimilarityRatio.Scorer.StrategySensitive;
 using Parfy.Model;
 using System.Text.RegularExpressions;
 
@@ -10,7 +7,7 @@ namespace Parfy
     public partial class NotesToComponentsAnalyser(IConsole console)
     {
         private readonly int _fuzzyWeightTreshold = 70;
-        private readonly int _fuzzyWeightWindowTreshold = 90;
+        private readonly int _fuzzyWeightWindowTreshold = 80;
 
         /// <summary>
         /// Найти подходящие вещества
@@ -111,11 +108,11 @@ namespace Parfy
             out string entry,
             out int weight)
         {
-            if (TrySearchPhrase(baseComponent.Description, synergyCandidate.NameENG, out entry, out weight))
+            if (TrySearchComponent(baseComponent.Description, synergyCandidate.NameENG, out entry, out weight))
             {
                 return true;
             }
-            else if (TrySearchPhrase(baseComponent.Description, synergyCandidate.NameRUS, out entry, out weight))
+            else if (TrySearchComponent(baseComponent.Description, synergyCandidate.NameRUS, out entry, out weight))
             {
                 return true;
             }
@@ -123,45 +120,57 @@ namespace Parfy
             return false;
         }
 
-        public bool TrySearchPhrase(
+        public bool TrySearchComponent(
             string largeText,
             string targetPhrase,
-            out string entry,
-            out int weight)
+            out string bestEntry,
+            out int bestWeight)
         {
-            entry = string.Empty;
-            weight = 0;
+            bestEntry = string.Empty;
+            bestWeight = 0;
 
-            IEnumerable<string> textWords = SplitByWords(largeText);
+            IEnumerable<string> textWords = SplitByWords(largeText.ToLower());
 
-            int windowSize = SplitByWords(targetPhrase).Count() + 1;
+            targetPhrase = NonLetters().Replace(targetPhrase, "");
+            targetPhrase = Regex.Replace(targetPhrase, "iff", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = Regex.Replace(targetPhrase, "bedoukian", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = Regex.Replace(targetPhrase, "givaudan", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = Regex.Replace(targetPhrase, "synarome", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = Regex.Replace(targetPhrase, "firmenich", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = Regex.Replace(targetPhrase, "givaudan", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = Regex.Replace(targetPhrase, "symrise", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = Regex.Replace(targetPhrase, "robertet", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = Regex.Replace(targetPhrase, " pg", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = Regex.Replace(targetPhrase, " dpg", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = Regex.Replace(targetPhrase, "кристаллическое", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = Regex.Replace(targetPhrase, "вещество", string.Empty, RegexOptions.IgnoreCase);
+            targetPhrase = targetPhrase.Trim();
+
+            int windowSize = SplitByWords(targetPhrase.ToLower()).Count() + 1;
 
             // Создаем фразы скользящим окном
-            List<string> phrases = [];
+            List<string> windows = [];
 
             for (int i = 0; i <= textWords.Count() - windowSize; i++)
             {
-                string phrase = string.Join(" ", textWords.Skip(i).Take(windowSize));
-                phrases.Add(phrase);
+                string window = string.Join(" ", textWords.Skip(i).Take(windowSize));
+                windows.Add(window);
             }
 
-            var topResult = Process.ExtractTop(targetPhrase.ToLower(),
-                [.. phrases.Select(x => x.ToLower())],
-                scorer: ScorerCache.Get<PartialRatioScorer>());
-
-            // Ищем наилучшее соответствие
-            var result = Process.ExtractOne(
-                targetPhrase.ToLower(),
-                [.. phrases.Select(x => x.ToLower())],
-                scorer: ScorerCache.Get<PartialRatioScorer>());
-
-            // Проверяем, достаточно ли высокий балл
-            if (result?.Score > _fuzzyWeightWindowTreshold)
+            foreach (string window in windows)
             {
-                entry = result.Value;
-                weight = result.Score;
+                int currentWindowWeight = Fuzz.PartialRatio(targetPhrase, window);
+                
+                if (currentWindowWeight > bestWeight)
+                {
+                    bestWeight = currentWindowWeight;
+                    bestEntry = window;
+                }
 
-                return true;
+                if (currentWindowWeight > _fuzzyWeightWindowTreshold)
+                {
+                    return true;
+                }
             }
 
             return false;
@@ -272,7 +281,7 @@ namespace Parfy
                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
 
-        [GeneratedRegex(@"[^а-яёА-ЯЁ]")]
-        private static partial Regex OnlyLetters();
+        [GeneratedRegex(@"[^а-яёa-z ]", RegexOptions.IgnoreCase, "ru-RU")]
+        private static partial Regex NonLetters();
     }
 }
