@@ -14,10 +14,21 @@ Option<DirectoryInfo> updateOut = new("--out")
 };
 update.Options.Add(updateOut);
 
+Option<string[]> updateBan = new("--ban")
+{
+    DefaultValueFactory = parseResult => [
+        "формула", "концентрат", "база", "base", "perfume oil", "урок", "консультация", "крышка", "флакон",
+        "краситель", "набор", "основа", "палочка", "палочки", "пипетка", "пипетки", "сертификат", "построение",
+        "пропиленгликоль", "тестирование", "фиолка", "фильтр", "укаршение", "хроматограмма", "введение",
+        "пробирка", "стакан", "весы", "диэтилфталат",
+    ]
+};
+update.Options.Add(updateBan);
+
 update.SetAction(async parseResult =>
 {
     ParfclubScaner scaner = new (console);
-    List<Component> components = await scaner.Scan();
+    List<Component> components = await scaner.Scan(parseResult.GetValue(updateBan));
     new CsvProcessor(console).GenerateParfy(components, parseResult.GetValue(updateOut)!);
 });
 

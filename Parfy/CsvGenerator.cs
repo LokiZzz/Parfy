@@ -16,6 +16,7 @@ namespace Parfy
 
             foreach (Component component in components)
             {
+                sb.AppendLine();
                 sb.AppendLine(
                     $"{EscapeForCsv(component.NameRUS)};" +
                     $"{EscapeForCsv(component.NameENG)};" +

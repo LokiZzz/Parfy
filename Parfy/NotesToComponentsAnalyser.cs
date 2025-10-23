@@ -48,7 +48,7 @@ namespace Parfy
                         console.WriteLine(
                             $"Найдено вещество: {component.NameENG}");
                         console.WriteLine(
-                            $"Совпадения ({entries.Count()}): {entries.Aggregate((x, y) => $"{x},{y}")}");
+                            $"-- Совпадения ({entries.Count()}): {entries.Aggregate((x, y) => $"{x},{y}")}");
 
                         foundComponents.Add(
                             new АppropriateComponent

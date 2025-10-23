@@ -9,7 +9,7 @@ namespace Parfy
     {
         private readonly HttpClient http = new();
 
-        public async Task<List<Component>> Scan()
+        public async Task<List<Component>> Scan(string[]? excludeTokens = null)
         {
             console.WriteLine($"Начато сканирование parfclub.");
 
@@ -34,7 +34,7 @@ namespace Parfy
                     console.ClearLastLine();
                 }
 
-                console.WriteLine($"Найдено {links.Count} ссылок. Текущая страница: {pageNumber}");
+                console.WriteLine($"Найдено {links.Count} ссылок. Текущая страница: {pageNumber}/{lastPageNumber}");
             }
 
             List<Component> components = [];
@@ -67,6 +67,18 @@ namespace Parfy
             }
 
             console.WriteLine($"Сканирование parfclub завершено.", EConsoleStatus.Success);
+
+            if (excludeTokens?.Length > 0)
+            {
+                components = [.. 
+                    components.Where(component =>
+                        excludeTokens.All(token => 
+                            !component.NameRUS.Contains(token, StringComparison.CurrentCultureIgnoreCase))
+                        && excludeTokens.All(token => 
+                            !component.NameENG.Contains(token, StringComparison.CurrentCultureIgnoreCase))
+                    )
+                ];
+            }
 
             return components;
         }
