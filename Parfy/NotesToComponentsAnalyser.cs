@@ -7,7 +7,7 @@ namespace Parfy
     public partial class NotesToComponentsAnalyser(IConsole console)
     {
         private readonly int _fuzzyWeightTreshold = 70;
-        private readonly int _fuzzyWeightWindowTreshold = 80;
+        private readonly int _fuzzyWeightWindowTreshold = 70;
 
         /// <summary>
         /// Найти подходящие вещества
@@ -32,8 +32,7 @@ namespace Parfy
 
             foreach (string note in notes)
             {
-                console.WriteLine(Environment.NewLine);
-                console.WriteLine($"Обработка ноты: {note} ({notes.IndexOf(note) + 1}/{notes.Count})");
+                console.WriteLine($"\nОбработка ноты: {note} ({notes.IndexOf(note) + 1}/{notes.Count})");
 
                 List<АppropriateComponent> foundComponents = [];
 
@@ -48,7 +47,7 @@ namespace Parfy
                         console.WriteLine(
                             $"Найдено вещество: {component.NameENG}");
                         console.WriteLine(
-                            $"-- Совпадения ({entries.Count()}): {entries.Aggregate((x, y) => $"{x},{y}")}");
+                            $"-- Вхождения ({entries.Count()}): {entries.Aggregate((x, y) => $"{x},{y}")}");
 
                         foundComponents.Add(
                             new АppropriateComponent
@@ -71,8 +70,7 @@ namespace Parfy
 
             foreach (Component baseComponent in allFoundComponents)
             {
-                console.WriteLine(Environment.NewLine);
-                console.WriteLine($"Поиск синергии для {baseComponent.NameENG}");
+                console.WriteLine($"\nПоиск синергии для {baseComponent.NameENG}");
 
                 foreach (Component synergyCandidate in sourceComponents)
                 {
@@ -80,7 +78,7 @@ namespace Parfy
                         && !baseComponent.NameENG.Equals(synergyCandidate.NameENG))
                     {
                         console.WriteLine($"Найдена синергия: {synergyCandidate.NameENG}");
-                        console.WriteLine($"Вхождение: {entry}, вес вхождения: {weight}");
+                        console.WriteLine($"-- Вхождение: {entry}, вес вхождения: {weight}");
 
                         synergies.Add(
                             new Synergy 
@@ -97,7 +95,7 @@ namespace Parfy
 
             result.Synergies.Add(1, synergies);
 
-            console.WriteLine($"Анализ закончен.");
+            console.WriteLine($"\nАнализ закончен.");
 
             return result;
         }
@@ -129,23 +127,10 @@ namespace Parfy
             bestEntry = string.Empty;
             bestWeight = 0;
 
-            IEnumerable<string> textWords = SplitByWords(largeText.ToLower());
+            largeText = NonLetters().Replace(largeText.ToLower(), "");
+            IEnumerable<string> textWords = SplitByWords(largeText);
 
-            targetPhrase = NonLetters().Replace(targetPhrase.ToLower(), "");
-            targetPhrase = Regex.Replace(targetPhrase, "iff", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = Regex.Replace(targetPhrase, "bedoukian", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = Regex.Replace(targetPhrase, "givaudan", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = Regex.Replace(targetPhrase, "synarome", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = Regex.Replace(targetPhrase, "firmenich", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = Regex.Replace(targetPhrase, "givaudan", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = Regex.Replace(targetPhrase, "symrise", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = Regex.Replace(targetPhrase, "robertet", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = Regex.Replace(targetPhrase, " pg", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = Regex.Replace(targetPhrase, " dpg", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = Regex.Replace(targetPhrase, "кристаллическое", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = Regex.Replace(targetPhrase, "вещество", string.Empty, RegexOptions.IgnoreCase);
-            targetPhrase = targetPhrase.Trim();
-
+            targetPhrase = NormalizeComponentName(targetPhrase);
             int windowSize = SplitByWords(targetPhrase).Count();
 
             // Создаем фразы скользящим окном
@@ -159,7 +144,7 @@ namespace Parfy
 
             foreach (string window in windows)
             {
-                int currentWindowWeight = Fuzz.PartialRatio(targetPhrase, window);
+                int currentWindowWeight = Fuzz.Ratio(targetPhrase, window);
                 
                 if (currentWindowWeight > bestWeight)
                 {
@@ -174,6 +159,32 @@ namespace Parfy
             }
 
             return false;
+        }
+
+        private string NormalizeComponentName(string name)
+        {
+            name = NonLetters().Replace(name.ToLower(), "");
+            name = Regex.Replace(name, "iff", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "bedoukian", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "givaudan", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "synarome", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "firmenich", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "givaudan", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "symrise", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "robertet", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, " pg", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, " in ", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, " dpg", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, " alc", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "кристаллическое", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "вещество", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "эфирное масло", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "абсолют", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "натуральный", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "природный", string.Empty, RegexOptions.IgnoreCase);
+            name = name.Trim();
+
+            return name;
         }
 
         /// <summary>

@@ -28,13 +28,12 @@ string text = "Свежий, характерный запах лесных гр
     "усиливает лесную и мшистую грань Floralozone и Helional — создают атмосферу утреннего " +
     "леса Muscenone или Cosmone — усиливают skin scent-эффект Ноты пачули, ветивера, " +
     "кедра Применение: В малых дозировках (0.01–0.1%) придаёт композиции ощущение реалистичной глубины, природной ауры, свежести утреннего леса. Особенно популярен в нишевой парфюмерии и ароматерапевтических композициях.";
-string wrongComponent = "acetanisole";
-string rightComponent = "Iso E Super® (IFF)";
+string component = "Eugenol 99.5% (Indonesia)";
+// Мусценон	Muscenone® Delta 962191 (Firmenich)
+// Амбреин природный Ambrain de labdanum (IFF)
 
-bool b1 = new NotesToComponentsAnalyser(new ConsoleWrapper())
-    .TrySearchComponent(text, wrongComponent, out string e1, out int w1);
 bool b2 = new NotesToComponentsAnalyser(new ConsoleWrapper())
-    .TrySearchComponent(text, rightComponent, out string e2, out int w2);
+    .TrySearchComponent(text, component, out string e2, out int w2);
 
 IConsole console = new ConsoleWrapper();
 
@@ -117,7 +116,8 @@ analyse.SetAction(parseResult =>
     CsvProcessor csvProcessor = new(console);
     List<Component> components = csvProcessor.ReadComponents(parseResult.GetValue(analyseSrc)!);
     NotesToComponentsAnalysis result = analyser.Analyse(components, parseResult.GetValue(analyseNotes)!);
-    csvProcessor.GenerateAnalysis(result, parseResult.GetValue(analyseOut)!);
+    string stop = string.Empty;
+    //csvProcessor.GenerateAnalysis(result, parseResult.GetValue(analyseOut)!);
 });
 
 RootCommand rootCommand = [update, analyse];
