@@ -25,7 +25,7 @@ namespace Parfy
             }
 
             FileInfo outputFile = WriteFile(
-                new(Path.Combine(outputDirectory.FullName, $"parfy_{DateTime.Now.ToFileTime()}.csv")),
+                new(Path.Combine(outputDirectory.FullName, $"parfy_source_{DateTime.Now.ToFileTime()}.csv")),
                 sb);
 
             console.WriteLine($"Готово. Файл записан по пути {outputFile.FullName}", EConsoleStatus.Success);
@@ -33,12 +33,13 @@ namespace Parfy
 
         public void GenerateAnalysis(NotesToComponentsAnalysis analysis, FileInfo outputFile)
         {
-            StringBuilder sb = new();
-            string componentHeaders = "Название вещества (RUS);" +
+            StringBuilder sb = new(
+                "Название вещества (RUS);" +
                 "Название вещества (ENG);" +
                 "Описание;" +
                 "Короткое описание;" +
-                "Ссылка";
+                "Ссылка");
+            sb.AppendLine();
 
             foreach (KeyValuePair<string, List<АppropriateComponent>> note in analysis.NoteToComponents)
             {
@@ -47,7 +48,6 @@ namespace Parfy
 
                 foreach (АppropriateComponent component in note.Value)
                 {
-                    sb.AppendLine(componentHeaders);
                     sb.AppendLine(
                         $"{EscapeForCsv(component.FoundComponent.NameRUS)};" +
                         $"{EscapeForCsv(component.FoundComponent.NameENG)};" +
@@ -55,6 +55,41 @@ namespace Parfy
                         $"{EscapeForCsv(component.FoundComponent.ShortDescription)};" +
                         $"{component.FoundComponent.Url};" +
                         $"{component.Entries.Aggregate((x, y) => $"{x},{y}")}");
+                }
+            }
+
+            sb.AppendLine("Синергии 1-ого уровня глубины");
+            sb.AppendLine(
+                "Название вещества (RUS);" +
+                "Название вещества (ENG);" +
+                "Описание;" +
+                "Короткое описание;" +
+                "Ссылка" +
+                "Вхождение;" +
+                "Вес вхождения");
+
+            if (analysis.Synergies.Count > 0)
+            {
+                IEnumerable<IGrouping<string, Synergy>> groupsByName = analysis.Synergies.First()
+                    .Value.GroupBy(x => x.Source.NameENG);
+
+                foreach (IGrouping<string, Synergy> group in groupsByName)
+                {
+                    sb.AppendLine($"Синергия для;{group.Key}");
+
+                    foreach (Synergy synergy in group)
+                    {
+                        Component synergent = synergy.Synergent;
+
+                        sb.AppendLine(
+                            $"{EscapeForCsv(synergent.NameRUS)};" +
+                            $"{EscapeForCsv(synergent.NameENG)};" +
+                            $"{EscapeForCsv(synergent.Description)};" +
+                            $"{EscapeForCsv(synergent.ShortDescription)};" +
+                            $"{synergent.Url};" +
+                            $"{synergy.Entry}" +
+                            $"{synergy.Weight}");
+                    }
                 }
             }
 

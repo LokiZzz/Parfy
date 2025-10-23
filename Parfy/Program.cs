@@ -84,7 +84,7 @@ await parseResult.InvokeAsync();
 FileInfo GetDefaultAnalyseSrc()
 {
     DirectoryInfo currentDirectory = new DirectoryInfo(Directory.GetCurrentDirectory());
-    IEnumerable<FileInfo> parfyFiles = currentDirectory.EnumerateFiles("parfy_*.csv");
+    IEnumerable<FileInfo> parfyFiles = currentDirectory.EnumerateFiles("parfy_source_*.csv");
 
     return parfyFiles?.MaxBy(x => x.CreationTimeUtc) ?? new FileInfo("stub");
 }

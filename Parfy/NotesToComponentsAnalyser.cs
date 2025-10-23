@@ -1,10 +1,13 @@
-﻿using Parfy.Model;
+﻿using FuzzySharp;
+using FuzzySharp.Extractor;
+using Parfy.Model;
 
 namespace Parfy
 {
     public class NotesToComponentsAnalyser(IConsole console)
     {
         private readonly int _fuzzyWeightTreshold = 60;
+        private readonly int _fuzzyWeightWindowTreshold = 60;
 
         /// <summary>
         /// Найти подходящие вещества
@@ -29,7 +32,9 @@ namespace Parfy
 
             foreach (string note in notes)
             {
+                console.WriteLine(Environment.NewLine);
                 console.WriteLine($"Обработка ноты: {note} ({notes.IndexOf(note) + 1}/{notes.Count})");
+
                 List<АppropriateComponent> foundComponents = [];
 
                 foreach (Component component in sourceComponents)
@@ -40,8 +45,10 @@ namespace Parfy
 
                     if (found)
                     {
-                        console.WriteLine($"Найдено вещество: {component.NameENG}");
-                        console.WriteLine($"Совпадения: {entries.Aggregate((x, y) => $"{x},{y}")}");
+                        console.WriteLine(
+                            $"Найдено вещество: {component.NameENG}");
+                        console.WriteLine(
+                            $"Совпадения ({entries.Count()}): {entries.Aggregate((x, y) => $"{x},{y}")}");
 
                         foundComponents.Add(
                             new АppropriateComponent
@@ -56,9 +63,97 @@ namespace Parfy
                 result.NoteToComponents.Add(note, foundComponents);
             }
 
+            console.WriteLine("Поиск синергии, 1 уровень глубины.");
+
+            IEnumerable<Component> allFoundComponents = result.NoteToComponents
+                .SelectMany(x => x.Value.Select(x => x.FoundComponent));
+            List<Synergy> synergies = [];
+
+            foreach (Component baseComponent in allFoundComponents)
+            {
+                console.WriteLine(Environment.NewLine);
+                console.WriteLine($"Поиск синергии для {baseComponent.NameENG}");
+
+                foreach (Component synergyCandidate in sourceComponents)
+                {
+                    if (TryToFindSynergy(baseComponent, synergyCandidate, out string entry, out int weight))
+                    {
+                        console.WriteLine($"Найдена синергия: {synergyCandidate}");
+                        console.WriteLine($"Вхождение: {entry}, вес вхождения: {weight}");
+
+                        synergies.Add(
+                            new Synergy 
+                            { 
+                                Source = baseComponent,
+                                Synergent = synergyCandidate,
+                                Entry = entry,
+                                Weight = weight
+                            }
+                        );
+                    }
+                }
+            }
+
+            result.Synergies.Add(1, synergies);
+
             console.WriteLine($"Анализ закончен.");
 
             return result;
+        }
+
+        private bool TryToFindSynergy(
+            Component baseComponent,
+            Component synergyCandidate,
+            out string entry,
+            out int weight)
+        {
+            if (TrySearchPhrase(baseComponent.Description, synergyCandidate.NameENG, out entry, out weight))
+            {
+                return true;
+            }
+            else if (TrySearchPhrase(baseComponent.Description, synergyCandidate.NameRUS, out entry, out weight))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool TrySearchPhrase(
+            string largeText,
+            string targetPhrase,
+            out string entry,
+            out int weight)
+        {
+            entry = string.Empty;
+            weight = 0;
+
+            IEnumerable<string> textWords = SplitByWords(largeText);
+
+            int windowSize = SplitByWords(targetPhrase).Count() + 2;
+
+            // Создаем фразы скользящим окном
+            List<string> phrases = new();
+
+            for (int i = 0; i <= textWords.Count() - windowSize; i++)
+            {
+                string phrase = string.Join(" ", textWords.Skip(i).Take(windowSize));
+                phrases.Add(phrase);
+            }
+
+            // Ищем наилучшее соответствие
+            ExtractedResult<string> result = Process.ExtractOne(targetPhrase, phrases);
+
+            // Проверяем, достаточно ли высокий балл
+            if (result.Score > _fuzzyWeightWindowTreshold)
+            {
+                entry = result.Value;
+                weight = result.Score;
+
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -119,7 +214,7 @@ namespace Parfy
 
             foreach (string word in SplitByWords(input))
             {
-                int weight = FuzzySharp.Fuzz.Ratio(word, query);
+                int weight = Fuzz.Ratio(word, query);
 
                 if (weight >= _fuzzyWeightTreshold)
                 {
@@ -194,6 +289,8 @@ namespace Parfy
 
         public Component Synergent { get; set; } = new();
 
-        public List<string> Entries { get; set; } = [];
+        public string Entry { get; set; } = string.Empty;
+
+        public int Weight { get; set; }
     }
 }
