@@ -131,7 +131,7 @@ namespace Parfy
 
             IEnumerable<string> textWords = SplitByWords(largeText.ToLower());
 
-            targetPhrase = NonLetters().Replace(targetPhrase, "");
+            targetPhrase = NonLetters().Replace(targetPhrase.ToLower(), "");
             targetPhrase = Regex.Replace(targetPhrase, "iff", string.Empty, RegexOptions.IgnoreCase);
             targetPhrase = Regex.Replace(targetPhrase, "bedoukian", string.Empty, RegexOptions.IgnoreCase);
             targetPhrase = Regex.Replace(targetPhrase, "givaudan", string.Empty, RegexOptions.IgnoreCase);
@@ -146,7 +146,7 @@ namespace Parfy
             targetPhrase = Regex.Replace(targetPhrase, "вещество", string.Empty, RegexOptions.IgnoreCase);
             targetPhrase = targetPhrase.Trim();
 
-            int windowSize = SplitByWords(targetPhrase.ToLower()).Count() + 1;
+            int windowSize = SplitByWords(targetPhrase).Count();
 
             // Создаем фразы скользящим окном
             List<string> windows = [];
