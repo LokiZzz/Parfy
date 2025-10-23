@@ -4,14 +4,13 @@ using FuzzySharp.SimilarityRatio;
 using FuzzySharp.SimilarityRatio.Scorer.StrategySensitive;
 using Parfy.Model;
 using System.Text.RegularExpressions;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Parfy
 {
     public partial class NotesToComponentsAnalyser(IConsole console)
     {
-        private readonly int _fuzzyWeightTreshold = 65;
-        private readonly int _fuzzyWeightWindowTreshold = 80;
+        private readonly int _fuzzyWeightTreshold = 70;
+        private readonly int _fuzzyWeightWindowTreshold = 90;
 
         /// <summary>
         /// Найти подходящие вещества
@@ -80,7 +79,8 @@ namespace Parfy
 
                 foreach (Component synergyCandidate in sourceComponents)
                 {
-                    if (TryToFindSynergy(baseComponent, synergyCandidate, out string entry, out int weight))
+                    if (TryToFindSynergy(baseComponent, synergyCandidate, out string entry, out int weight)
+                        && !baseComponent.NameENG.Equals(synergyCandidate.NameENG))
                     {
                         console.WriteLine($"Найдена синергия: {synergyCandidate.NameENG}");
                         console.WriteLine($"Вхождение: {entry}, вес вхождения: {weight}");
@@ -144,6 +144,10 @@ namespace Parfy
                 string phrase = string.Join(" ", textWords.Skip(i).Take(windowSize));
                 phrases.Add(phrase);
             }
+
+            var topResult = Process.ExtractTop(targetPhrase.ToLower(),
+                [.. phrases.Select(x => x.ToLower())],
+                scorer: ScorerCache.Get<PartialRatioScorer>());
 
             // Ищем наилучшее соответствие
             var result = Process.ExtractOne(

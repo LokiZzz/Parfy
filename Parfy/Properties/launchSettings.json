@@ -2,7 +2,7 @@
   "profiles": {
     "Parfy": {
       "commandName": "Project",
-      "commandLineArgs": "analyse --notes \"грибы, акация, апельсин, перец\"",
+      "commandLineArgs": "analyse --notes \"грибы\"",
       "workingDirectory": "C:\\Users\\lokiz\\OneDrive\\Рабочий стол"
     }
   }

@@ -65,7 +65,7 @@ namespace Parfy
                 "Название вещества (ENG);" +
                 "Описание;" +
                 "Короткое описание;" +
-                "Ссылка" +
+                "Ссылка;" +
                 "Вхождение;" +
                 "Вес вхождения");
 
@@ -88,7 +88,7 @@ namespace Parfy
                             $"{EscapeForCsv(synergent.Description)};" +
                             $"{EscapeForCsv(synergent.ShortDescription)};" +
                             $"{synergent.Url};" +
-                            $"{synergy.Entry}" +
+                            $"{synergy.Entry};" +
                             $"{synergy.Weight}");
                     }
                 }
