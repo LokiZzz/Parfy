@@ -70,7 +70,11 @@ analyse.Options.Add(analyseOut);
 
 analyse.SetAction(parseResult =>
 {
-    
+    NotesToComponentsAnalyser analyser = new(console);
+    CsvProcessor csvProcessor = new(console);
+    List<Component> components = csvProcessor.ReadComponents(parseResult.GetValue(analyseSrc)!);
+    NotesToComponentsAnalysis result = analyser.Analyse(components, parseResult.GetValue(analyseNotes)!);
+    csvProcessor.GenerateAnalysis(result, parseResult.GetValue(analyseOut)!);
 });
 
 RootCommand rootCommand = [update, analyse];

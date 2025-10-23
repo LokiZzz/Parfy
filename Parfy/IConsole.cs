@@ -29,7 +29,7 @@
             {
                 EConsoleStatus.Success => ConsoleColor.Green,
                 EConsoleStatus.Error => ConsoleColor.Red,
-                _ => ConsoleColor.White
+                _ => ConsoleColor.Magenta
             };
 
             Console.WriteLine(message);

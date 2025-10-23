@@ -1,11 +1,10 @@
 ﻿using Parfy.Model;
-using System.Text.RegularExpressions;
 
 namespace Parfy
 {
-    public class NotesToComponentsAnalyser
+    public class NotesToComponentsAnalyser(IConsole console)
     {
-        private int _fuzzyWeightTreshold = 50;
+        private readonly int _fuzzyWeightTreshold = 60;
 
         /// <summary>
         /// Найти подходящие вещества
@@ -18,24 +17,34 @@ namespace Parfy
         /// Данный параметр указывает сколько раз был проведён поиск синергий.
         /// </param>
         /// <returns></returns>
-        public NotesToComponentsAnalysisResult Find(
+        public NotesToComponentsAnalysis Analyse(
             List<Component> sourceComponents,
             string notesInput,
             int synergyDepth = 2)
         {
-            NotesToComponentsAnalysisResult result = new();
+            console.WriteLine("Начат анализ композиции.");
+            NotesToComponentsAnalysis result = new();
             List<string> notes = GetNormalizedNotes(notesInput);
+            console.WriteLine($"Нормализованный список нот: {notes.Aggregate((x, y) => $"{x},{y}")}");
 
             foreach (string note in notes)
             {
-                List<ComponentEntry> foundComponents = [];
+                console.WriteLine($"Обработка ноты: {note} ({notes.IndexOf(note) + 1}/{notes.Count})");
+                List<АppropriateComponent> foundComponents = [];
 
                 foreach (Component component in sourceComponents)
                 {
-                    if(ComponentHasFuzzyEntries(component, note, out List<string> entries))
+                    console.WriteLine($"Проверка вещества: {component.NameENG}");
+                    bool found = ComponentHasFuzzyEntries(component, note, out List<string> entries);
+                    console.ClearLastLine();
+
+                    if (found)
                     {
+                        console.WriteLine($"Найдено вещество: {component.NameENG}");
+                        console.WriteLine($"Совпадения: {entries.Aggregate((x, y) => $"{x},{y}")}");
+
                         foundComponents.Add(
-                            new ComponentEntry 
+                            new АppropriateComponent
                             {
                                 Entries = entries,
                                 FoundComponent = component
@@ -46,6 +55,8 @@ namespace Parfy
 
                 result.NoteToComponents.Add(note, foundComponents);
             }
+
+            console.WriteLine($"Анализ закончен.");
 
             return result;
         }
@@ -63,7 +74,6 @@ namespace Parfy
             bool optimize = false)
         {
             entries = [];
-
             bool isNameENGEntry = 
                 TrySearchFuzzy(component.NameENG, note, out List<string> entriesInNameENG);
             entries.AddRange(entriesInNameENG);
@@ -107,18 +117,17 @@ namespace Parfy
         {
             List<(string Entry, int Weigth)> entriesWithWeights = [];
 
-            foreach (string chunk in input.Split(' '))
+            foreach (string word in SplitByWords(input))
             {
-                string cleanChunk = Regex.Replace(chunk, @"[^а-яёА-ЯЁ]", "");
-                int chunkWeight = FuzzySharp.Fuzz.Ratio(cleanChunk, query);
+                int weight = FuzzySharp.Fuzz.Ratio(word, query);
 
-                if (chunkWeight >= _fuzzyWeightTreshold)
+                if (weight >= _fuzzyWeightTreshold)
                 {
-                    entriesWithWeights.Add((chunk, chunkWeight));
+                    entriesWithWeights.Add((word, weight));
                 }
             }
 
-            entries = entriesWithWeights.Select(x => x.Entry).ToList();
+            entries = [.. entriesWithWeights.Select(x => x.Entry)];
 
             return entries.Count != 0;
         }
@@ -133,7 +142,7 @@ namespace Parfy
                 .Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(x => x.Trim());
 
-            List<string> normalized = splittedTrimmed.ToList();
+            List<string> normalized = [.. splittedTrimmed];
 
             foreach (string item in splittedTrimmed)
             {
@@ -147,16 +156,22 @@ namespace Parfy
                 }
             }
 
-            return normalized.Select(x => x.ToLower()).ToList();
+            return [.. normalized.Select(x => x.ToLower())];
+        }
+
+        private IEnumerable<string> SplitByWords(string input)
+        {
+            return input.Split([' ', ',', '.', '!', '?', ';', ':', '\n', '\r', '\t'])
+                .Select(x => x.Trim());
         }
     }
 
-    public class NotesToComponentsAnalysisResult
+    public class NotesToComponentsAnalysis
     {
         /// <summary>
         /// Список компонентов для каждой перечисленной ноты.
         /// </summary>
-        public Dictionary<string, List<ComponentEntry>> NoteToComponents { get; set; } = [];
+        public Dictionary<string, List<АppropriateComponent>> NoteToComponents { get; set; } = [];
 
         /// <summary>
         /// При поиске компонентов в описании могут быть указаны другие компоненты, с которыми у источника синергия.
@@ -166,7 +181,7 @@ namespace Parfy
         public Dictionary<int, List<Synergy>> Synergies { get; set; } = [];
     }
 
-    public class ComponentEntry
+    public class АppropriateComponent
     {
         public Component FoundComponent { get; set; } = new();
 
@@ -175,9 +190,9 @@ namespace Parfy
 
     public class Synergy
     {
-        public Component SourceComponent { get; set; } = new();
+        public Component Source { get; set; } = new();
 
-        public Component SynergyComponents { get; set; } = new();
+        public Component Synergent { get; set; } = new();
 
         public List<string> Entries { get; set; } = [];
     }
