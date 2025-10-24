@@ -79,7 +79,8 @@ namespace Parfy
                 }
             }
 
-            sb.AppendLine("Синергии 1-ого уровня глубины");
+            sb.AppendLine();
+            sb.AppendLine("Синергии");
             sb.AppendLine();
             sb.AppendLine(
                 "Полное название;" +

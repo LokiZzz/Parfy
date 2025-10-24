@@ -84,7 +84,7 @@ Option<string[]> analyseBan = new("--ban")
 { 
     Required = false,
     Description = "Список забаненых вхождений для всей композиции.",
-    DefaultValueFactory = parseValue => ["аромат", "как", "не", "формат", "тот", "том"]
+    DefaultValueFactory = parseValue => ["аромат", "как", "не", "формат", "тот", "том", "как", "каркас"]
 };
 analyse.Options.Add(analyseBan);
 
