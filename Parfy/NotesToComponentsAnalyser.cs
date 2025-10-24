@@ -1,5 +1,6 @@
 ﻿using FuzzySharp;
 using Parfy.Model;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace Parfy
@@ -22,24 +23,27 @@ namespace Parfy
         /// <returns></returns>
         public NotesToComponentsAnalysis Analyse(
             List<Component> sourceComponents,
-            string notesInput,
-            int synergyDepth = 2)
+            List<(string Note, string[] Exclude)> notesInput,
+            string[]? excludeEntryTokens = null)
         {
             console.WriteLine("Начат анализ композиции.");
-            NotesToComponentsAnalysis result = new();
-            List<string> notes = GetNormalizedNotes(notesInput);
-            console.WriteLine($"Нормализованный список нот: {notes.Aggregate((x, y) => $"{x},{y}")}");
 
-            foreach (string note in notes)
+            NotesToComponentsAnalysis result = new();
+            List<(string Note, string[] Exclude)> notes = GetNormalizedNotes(notesInput);
+
+            console.WriteLine($"Нормализованный список нот: " +
+                $"{notes.Select(x => x.Note).Aggregate((x, y) => $"{x},{y}")}");
+
+            foreach ((string Note, string[] Exclude) item in notes)
             {
-                console.WriteLine($"\nОбработка ноты: {note} ({notes.IndexOf(note) + 1}/{notes.Count})");
+                console.WriteLine($"\nОбработка ноты: {item.Note} ({notes.IndexOf(item) + 1}/{notes.Count})");
 
                 List<АppropriateComponent> foundComponents = [];
 
                 foreach (Component component in sourceComponents)
                 {
                     console.WriteLine($"Проверка вещества: {component.NameENG}");
-                    bool found = ComponentHasFuzzyEntries(component, note, out List<string> entries);
+                    bool found = ComponentHasFuzzyEntries(component, item.Note, out List<string> entries);
                     console.ClearLastLine();
 
                     if (found)
@@ -47,7 +51,13 @@ namespace Parfy
                         console.WriteLine(
                             $"Найдено вещество: {component.NameENG}");
                         console.WriteLine(
-                            $"-- Вхождения ({entries.Count()}): {entries.Aggregate((x, y) => $"{x},{y}")}");
+                            $"-- Вхождения ({entries.Count}): {entries.Aggregate((x, y) => $"{x},{y}")}");
+
+                        if (CheckBannedEntries(entries, excludeEntryTokens)
+                            || CheckBannedEntries(entries, item.Exclude))
+                        {
+                            continue;
+                        }
 
                         foundComponents.Add(
                             new АppropriateComponent
@@ -59,10 +69,10 @@ namespace Parfy
                     }
                 }
 
-                result.NoteToComponents.Add(note, foundComponents);
+                result.NoteToComponents.Add(item.Note, foundComponents);
             }
 
-            console.WriteLine("Поиск синергии, 1 уровень глубины.");
+            console.WriteLine("\nПоиск синергий.");
 
             IEnumerable<Component> allFoundComponents = result.NoteToComponents
                 .SelectMany(x => x.Value.Select(x => x.FoundComponent));
@@ -98,6 +108,22 @@ namespace Parfy
             console.WriteLine($"\nАнализ закончен.");
 
             return result;
+        }
+
+        /// <summary>
+        /// Проверить наличие вхождений в бане.
+        /// </summary>
+        /// <param name="entries"></param>
+        /// <param name="exclude"></param>
+        /// <returns></returns>
+        private bool CheckBannedEntries(List<string> entries, string[]? exclude)
+        {
+            if (exclude is not null && exclude.Length > 0)
+            {
+                return entries.All(x => exclude.Select(x => x.ToLower()).Contains(x.ToLower()));
+            }
+
+            return false;
         }
 
         private bool TryToFindSynergy(
@@ -273,27 +299,23 @@ namespace Parfy
         /// Разделить через запятую, если нота — это несколько слов, то разделить по пробелу и дополнительно добавить
         /// все части в список нот.
         /// </summary>
-        private List<string> GetNormalizedNotes(string notesInput)
+        private List<(string Note, string[] Exclude)> GetNormalizedNotes(
+            List<(string Note, string[] Exclude)> notesInput)
         {
-            IEnumerable<string> splittedTrimmed = notesInput
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => x.Trim());
+            List<(string Note, string[] Exclude)> result = [];
 
-            List<string> normalized = [.. splittedTrimmed];
-
-            foreach (string item in splittedTrimmed)
+            foreach ((string Note, string[] Exclude) item in notesInput)
             {
-                IEnumerable<string> splittedBySpace = item
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(x => x.Trim());
+                result.Add((item.Note, item.Exclude));
+                string[] splitted = item.Note.Split('-');
 
-                if (splittedBySpace.Count() > 1)
+                if(splitted.Length > 1)
                 {
-                    normalized.AddRange(splittedBySpace);
+                    result.AddRange(splitted.Select(x => (x.Trim(), item.Exclude)));
                 }
             }
 
-            return [.. normalized.Select(x => x.ToLower())];
+            return result;
         }
 
         private IEnumerable<string> SplitByWords(string input)

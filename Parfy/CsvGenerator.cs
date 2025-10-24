@@ -169,6 +169,9 @@ namespace Parfy
 
                         switch ((EComponentSourceMapping)j)
                         {
+                            case EComponentSourceMapping.OriginalName:
+                                component.OriginalName = values[j];
+                                break;
                             case EComponentSourceMapping.NameRUS:
                                 component.NameRUS = values[j];
                                 break;
@@ -307,11 +310,12 @@ namespace Parfy
 
         private enum EComponentSourceMapping
         {
-            NameRUS = 0,
-            NameENG = 1,
-            Description = 2,
-            ShortDescription = 3,
-            Url = 4
+            OriginalName = 0,
+            NameRUS = 1,
+            NameENG = 2,
+            Description = 3,
+            ShortDescription = 4,
+            Url = 5
         }
     }
 }

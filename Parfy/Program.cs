@@ -1,20 +1,16 @@
-﻿using Newtonsoft.Json;
-using Parfy;
+﻿using Parfy;
 using Parfy.Model;
 using System.CommandLine;
 
-Component comp = new Component() { OriginalName = "Castoreum Blend (IFF) 10% in alc. (Кастореум натуральный бленд)\r\n" };
-CsvProcessor.SplitComponentName(comp);
-
 // Регенерация через JSON:
-string json = File.ReadAllText("C:\\Users\\lokiz\\OneDrive\\Рабочий стол\\parfy_source_134057677119011835.json");
-List<Component> components = JsonConvert.DeserializeObject<List<Component>>(json)!;
-new CsvProcessor(new ConsoleWrapper()).GenerateParfy(
-    components,
-    new DirectoryInfo($"C:\\Users\\lokiz\\OneDrive\\Рабочий стол"),
-    includeJson: false);
+//string json = File.ReadAllText("C:\\Users\\lokiz\\OneDrive\\Рабочий стол\\parfy_source_134057677119011835.json");
+//List<Component> components = JsonConvert.DeserializeObject<List<Component>>(json)!;
+//new CsvProcessor(new ConsoleWrapper()).GenerateParfy(
+//    components,
+//    new DirectoryInfo($"C:\\Users\\lokiz\\OneDrive\\Рабочий стол"),
+//    includeJson: false);
 
-return;
+//return;
 
 IConsole console = new ConsoleWrapper();
 
@@ -39,7 +35,7 @@ update.Options.Add(updateBan);
 
 update.SetAction(async parseResult =>
 {
-    ParfclubScaner scaner = new (console);
+    ParfclubScaner scaner = new(console);
     List<Component> components = await scaner.Scan(parseResult.GetValue(updateBan));
     new CsvProcessor(console).GenerateParfy(components, parseResult.GetValue(updateOut)!);
 });
@@ -77,12 +73,20 @@ analyseNotes.Validators.Add(result =>
 
     string[] splitted = input.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-    if(splitted.Count() < 1)
+    if (splitted.Count() < 1)
     {
         result.AddError("Не указаны ноты.");
     }
 });
 analyse.Options.Add(analyseNotes);
+
+Option<string[]> analyseBan = new("--ban") 
+{ 
+    Required = false,
+    Description = "Список забаненых вхождений для всей композиции.",
+    DefaultValueFactory = parseValue => ["аромат", "как", "не", "формат", "тот", "том"]
+};
+analyse.Options.Add(analyseBan);
 
 Option<FileInfo> analyseOut = new("--out")
 {
@@ -99,7 +103,9 @@ analyse.SetAction(parseResult =>
 
     if (components?.Count > 0)
     {
-        NotesToComponentsAnalysis result = analyser.Analyse(components, parseResult.GetValue(analyseNotes)!);
+        List<(string Note, string[] Exclude)> notes = GetNotesFromParameter(parseResult.GetValue(analyseNotes)!);
+        string[] bannedEntries = parseResult.GetValue(analyseBan)!;
+        NotesToComponentsAnalysis result = analyser.Analyse(components, notes, excludeEntryTokens: bannedEntries);
         csvProcessor.GenerateAnalysis(result, parseResult.GetValue(analyseOut)!);
     }
 });
@@ -124,4 +130,27 @@ FileInfo GetDefaultAnalyseOut()
             $"parfy_analysis_{DateTime.Now.ToFileTime()}.csv"
         )
     );
+}
+
+List<(string Note, string[] Exclude)> GetNotesFromParameter(string input)
+{
+    List<(string Note, string[] Exclude)> notes = [];
+    string[] splitted = input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    foreach (string noteWithExclude in splitted)
+    {
+        string[] splittedWithExclude = noteWithExclude
+            .Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (splittedWithExclude.Length > 1)
+        {
+            notes.Add((splittedWithExclude.First(), splittedWithExclude.Skip(1).ToArray()));
+        }
+        else
+        {
+            notes.Add((splittedWithExclude.First(), []));
+        }
+    }
+
+    return notes;
 }
