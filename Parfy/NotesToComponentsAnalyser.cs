@@ -120,7 +120,11 @@ namespace Parfy
         {
             if (exclude is not null && exclude.Length > 0)
             {
-                return entries.All(x => exclude.Select(x => x.ToLower()).Contains(x.ToLower()));
+                exclude = exclude.Select(x => x.ToLower()).ToArray();
+
+                return entries.All(entry => 
+                    exclude.Any(ban => entry.Contains(ban, StringComparison.CurrentCultureIgnoreCase))
+                );
             }
 
             return false;
@@ -210,7 +214,7 @@ namespace Parfy
             name = Regex.Replace(name, " in ", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, " dpg", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, " alc ", string.Empty, RegexOptions.IgnoreCase);
-            name = Regex.Replace(name, " alc.", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, @" alc\.", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, "кристаллическое", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, "вещество", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, "эфирное масло", string.Empty, RegexOptions.IgnoreCase);
