@@ -73,9 +73,7 @@ namespace Parfy
                 components = [.. 
                     components.Where(component =>
                         excludeTokens.All(token => 
-                            !component.NameRUS.Contains(token, StringComparison.CurrentCultureIgnoreCase))
-                        && excludeTokens.All(token => 
-                            !component.NameENG.Contains(token, StringComparison.CurrentCultureIgnoreCase))
+                            !component.OriginalName.Contains(token, StringComparison.CurrentCultureIgnoreCase))
                     )
                 ];
             }
@@ -140,19 +138,6 @@ namespace Parfy
                 .SelectSingleNode("//h1[@class='woo-product-details-title product_title entry-title']");
             string decoded = HttpUtility.HtmlDecode(h1.InnerText); // Бывает кривоватое кодирование
             component.OriginalName = decoded;
-            string cleaned = decoded.Replace(" — ", "-").Replace("—", "-").Trim();
-
-            string[] parts = cleaned.Split(" / ", StringSplitOptions.RemoveEmptyEntries);
-            component.NameENG = parts[0].Trim();
-            component.NameRUS = parts.Length > 1 ? parts[1].Trim() : string.Empty;
-
-            // Если не получилось разделить, то скорее всего формат такой: «Component (вещество)»
-            if (string.IsNullOrWhiteSpace(component.NameRUS))
-            {
-                parts = cleaned.Split('(', StringSplitOptions.RemoveEmptyEntries);
-                component.NameENG = parts[0].Trim();
-                component.NameRUS = (parts.Length > 1 ? parts[1].Trim() : string.Empty).Replace(")", string.Empty);
-            }
 
             // Длинное описание с рекомендациями из вкладок внизу
             HtmlNode tab = htmlDoc.DocumentNode.SelectSingleNode("//div[@id='tab-description']");
@@ -166,13 +151,19 @@ namespace Parfy
             // Короткое описание-таблица справа от иллюстрации
             HtmlNode shortDescr = htmlDoc.DocumentNode
                 .SelectSingleNode("//div[@class='woocommerce-product-details__short-description']");
-            string oneLineShortDescr = Regex.Replace(shortDescr.InnerText.Trim(), @"\n", ", ");
-            component.ShortDescription = Regex.Replace(oneLineShortDescr, @"\s+", " ").Trim();
+            string oneLineShortDescr = NewLine().Replace(shortDescr.InnerText.Trim(), ", ");
+            component.ShortDescription = MultiSpace().Replace(oneLineShortDescr, " ").Trim();
 
             return component;
         }
 
         [GeneratedRegex(@"\s+")]
         private static partial Regex Spaces();
+
+        [GeneratedRegex(@"\n")]
+        private static partial Regex NewLine();
+
+        [GeneratedRegex(@"\s+")]
+        private static partial Regex MultiSpace();
     }
 }

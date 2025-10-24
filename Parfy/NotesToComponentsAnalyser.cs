@@ -161,9 +161,17 @@ namespace Parfy
             return false;
         }
 
-        public string NormalizeComponentName(string name)
+        public static string NormalizeComponentName(string name)
         {
             name = NonLetters().Replace(name.ToLower(), "") + " ";
+            name = RemoveTrashFromName(name);
+            name = name.Trim();
+
+            return name;
+        }
+
+        public static string RemoveTrashFromName(string name)
+        {
             name = Regex.Replace(name, "iff", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, "bedoukian", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, "givaudan", string.Empty, RegexOptions.IgnoreCase);
@@ -176,14 +184,16 @@ namespace Parfy
             name = Regex.Replace(name, " in ", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, " dpg", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, " alc ", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, " alc.", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, "кристаллическое", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, "вещество", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, "эфирное масло", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, "абсолют", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, "натуральный", string.Empty, RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "natural", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, "природный", string.Empty, RegexOptions.IgnoreCase);
             name = Regex.Replace(name, " мл", string.Empty, RegexOptions.IgnoreCase);
-            name = name.Trim();
+            name = Regex.Replace(name, " eo ", string.Empty, RegexOptions.IgnoreCase);
 
             return name;
         }

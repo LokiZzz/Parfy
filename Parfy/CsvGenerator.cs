@@ -1,15 +1,30 @@
-﻿using Parfy.Model;
+﻿using Newtonsoft.Json;
+using Parfy.Model;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Parfy
 {
     public class CsvProcessor(IConsole console)
     {
-        public void GenerateParfy(List<Component> components, DirectoryInfo outputDirectory)
+        public void GenerateParfy(
+            List<Component> components,
+            DirectoryInfo outputDirectory,
+            bool includeJson = true)
         {
+            if (includeJson)
+            {
+                StringBuilder jsonSb = new(JsonConvert.SerializeObject(components));
+                string jsonPath = Path.Combine(
+                    outputDirectory.FullName,
+                    $"parfy_source_{DateTime.Now.ToFileTime()}.json");
+                WriteFile(new(jsonPath), jsonSb);
+            }
+
             StringBuilder sb = new(
-                "Название вещества (RUS);" +
-                "Название вещества (ENG);" +
+                "Полное название;" +
+                "Название (RUS);" +
+                "Название (ENG);" +
                 "Описание;" +
                 "Короткое описание;" +
                 "Ссылка");
@@ -17,7 +32,10 @@ namespace Parfy
 
             foreach (Component component in components)
             {
+                SplitComponentName(in component);
+
                 sb.AppendLine(
+                    $"{EscapeForCsv(component.OriginalName)};" +
                     $"{EscapeForCsv(component.NameRUS)};" +
                     $"{EscapeForCsv(component.NameENG)};" +
                     $"{EscapeForCsv(component.Description)};" +
@@ -244,6 +262,47 @@ namespace Parfy
             }
 
             return input;
+        }
+
+        public static void SplitComponentName(in Component component)
+        {
+            string original = component.OriginalName;
+            string cleaned = original.Replace(" — ", "-").Replace("—", "-").Trim();
+
+            cleaned = NormalizeOriginalName(cleaned);
+
+            // Иногда пробел не ставится перед слэшем.
+            List<string> parts = cleaned.Split("/ ", StringSplitOptions.RemoveEmptyEntries)
+                .Where(x => Regex.IsMatch(x, "[а-яёa-z]", RegexOptions.IgnoreCase))
+                .ToList();
+            component.NameENG = parts[0].Trim();
+            component.NameRUS = parts.Count > 1 ? parts[1].Trim() : string.Empty;
+
+            // Если не получилось разделить, то скорее всего формат такой: «Component (вещество)»
+            if (string.IsNullOrWhiteSpace(component.NameRUS))
+            {
+                parts = cleaned.Split('(', StringSplitOptions.RemoveEmptyEntries)
+                    .Where(x => Regex.IsMatch(x, "[а-яёa-z]", RegexOptions.IgnoreCase))
+                    .ToList();
+                component.NameENG = parts[0].Trim();
+                component.NameRUS = (parts.Count > 1 ? parts[1].Trim() : string.Empty).Replace(")", string.Empty);
+            }
+
+            component.NameRUS = Regex.Replace(component.NameRUS, @"\(|\)", "", RegexOptions.IgnoreCase);
+            component.NameRUS = Regex.Replace(component.NameRUS, @"\s+", " ", RegexOptions.IgnoreCase).ToLower();
+            component.NameENG = Regex.Replace(component.NameENG, @"\(|\)", "", RegexOptions.IgnoreCase);
+            component.NameENG = Regex.Replace(component.NameENG, @"\s+", " ", RegexOptions.IgnoreCase).ToLower();
+        }
+
+        public static string NormalizeOriginalName(string name)
+       {
+            name = Regex.Replace(name, @"%", " ", RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, "[^()/0-9а-яёa-z -]", string.Empty, RegexOptions.IgnoreCase);
+            name = NotesToComponentsAnalyser.RemoveTrashFromName(name);
+            name = Regex.Replace(name, @"\s+\d+", " ", RegexOptions.IgnoreCase);
+            name = Regex.Replace(name, @"100", " ", RegexOptions.IgnoreCase);
+
+            return name;
         }
 
         private enum EComponentSourceMapping
