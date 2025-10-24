@@ -5,6 +5,9 @@ using Parfy;
 using Parfy.Model;
 using System.CommandLine;
 
+string normalized = new NotesToComponentsAnalyser(new ConsoleWrapper()).NormalizeComponentName(
+    "Muscenone® Delta alcohol 962191 (Firmenich) in DPG 10% in alc 12%");
+
 string t = "синергия iso";
 string c = "acetanisole";
 
@@ -27,7 +30,9 @@ string text = "Свежий, характерный запах лесных гр
     "Синергия: Iso E Super — добавляет прозрачности и амбровой теплоты Evernyl (мох) — " +
     "усиливает лесную и мшистую грань Floralozone и Helional — создают атмосферу утреннего " +
     "леса Muscenone или Cosmone — усиливают skin scent-эффект Ноты пачули, ветивера, " +
-    "кедра Применение: В малых дозировках (0.01–0.1%) придаёт композиции ощущение реалистичной глубины, природной ауры, свежести утреннего леса. Особенно популярен в нишевой парфюмерии и ароматерапевтических композициях.";
+    "кедра Применение: В малых дозировках (0.01–0.1%) придаёт композиции ощущение реалистичной глубины, " +
+    "природной ауры, свежести утреннего леса. Особенно популярен в нишевой парфюмерии и " +
+    "ароматерапевтических композициях.";
 string component = "Eugenol 99.5% (Indonesia)";
 // Мусценон	Muscenone® Delta 962191 (Firmenich)
 // Амбреин природный Ambrain de labdanum (IFF)
@@ -51,7 +56,7 @@ Option<string[]> updateBan = new("--ban")
         "формула", "концентрат", "база", "base", "perfume oil", "урок", "консультация", "крышка", "флакон",
         "краситель", "набор", "основа", "палочка", "палочки", "пипетка", "пипетки", "сертификат", "построение",
         "пропиленгликоль", "тестирование", "фиолка", "фильтр", "укаршение", "хроматограмма", "введение",
-        "пробирка", "стакан", "весы", "диэтилфталат",
+        "пробирка", "стакан", "весы", "диэтилфталат", "воронка",
     ]
 };
 update.Options.Add(updateBan);
@@ -115,9 +120,12 @@ analyse.SetAction(parseResult =>
     NotesToComponentsAnalyser analyser = new(console);
     CsvProcessor csvProcessor = new(console);
     List<Component> components = csvProcessor.ReadComponents(parseResult.GetValue(analyseSrc)!);
-    NotesToComponentsAnalysis result = analyser.Analyse(components, parseResult.GetValue(analyseNotes)!);
-    string stop = string.Empty;
-    //csvProcessor.GenerateAnalysis(result, parseResult.GetValue(analyseOut)!);
+
+    if (component?.Length > 0)
+    {
+        NotesToComponentsAnalysis result = analyser.Analyse(components, parseResult.GetValue(analyseNotes)!);
+        csvProcessor.GenerateAnalysis(result, parseResult.GetValue(analyseOut)!);
+    }
 });
 
 RootCommand rootCommand = [update, analyse];

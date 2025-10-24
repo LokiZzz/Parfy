@@ -2,6 +2,8 @@
 {
     public class Component
     {
+        public string OriginalName { get; set; } = string.Empty;
+
         public string NameRUS { get; set; } = string.Empty;
 
         public string NameENG { get; set; } = string.Empty;

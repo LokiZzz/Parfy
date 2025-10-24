@@ -35,8 +35,9 @@ namespace Parfy
         public void GenerateAnalysis(NotesToComponentsAnalysis analysis, FileInfo outputFile)
         {
             StringBuilder sb = new(
-                "Название вещества (RUS);" +
-                "Название вещества (ENG);" +
+                "Полное название;" +
+                "Название (RUS);" +
+                "Название (ENG);" +
                 "Описание;" +
                 "Короткое описание;" +
                 "Ссылка");
@@ -50,6 +51,7 @@ namespace Parfy
                 foreach (АppropriateComponent component in note.Value)
                 {
                     sb.AppendLine(
+                        $"{EscapeForCsv(component.FoundComponent.OriginalName)};" +
                         $"{EscapeForCsv(component.FoundComponent.NameRUS)};" +
                         $"{EscapeForCsv(component.FoundComponent.NameENG)};" +
                         $"{EscapeForCsv(component.FoundComponent.Description)};" +
@@ -60,9 +62,11 @@ namespace Parfy
             }
 
             sb.AppendLine("Синергии 1-ого уровня глубины");
+            sb.AppendLine();
             sb.AppendLine(
-                "Название вещества (RUS);" +
-                "Название вещества (ENG);" +
+                "Полное название;" +
+                "Название (RUS);" +
+                "Название (ENG);" +
                 "Описание;" +
                 "Короткое описание;" +
                 "Ссылка;" +
@@ -76,6 +80,7 @@ namespace Parfy
 
                 foreach (IGrouping<string, Synergy> group in groupsByName)
                 {
+                    sb.AppendLine();
                     sb.AppendLine($"Синергия для;{group.Key}");
 
                     foreach (Synergy synergy in group)
@@ -83,6 +88,7 @@ namespace Parfy
                         Component synergent = synergy.Synergent;
 
                         sb.AppendLine(
+                            $"{EscapeForCsv(synergent.OriginalName)};" +
                             $"{EscapeForCsv(synergent.NameRUS)};" +
                             $"{EscapeForCsv(synergent.NameENG)};" +
                             $"{EscapeForCsv(synergent.Description)};" +
@@ -96,7 +102,7 @@ namespace Parfy
 
             WriteFile(outputFile, sb);
 
-            console.WriteLine($"Готово. Файл записан по пути {outputFile.FullName}", EConsoleStatus.Success);
+            console.WriteLine($"\nГотово. Файл записан по пути {outputFile.FullName}", EConsoleStatus.Success);
         }
 
         public List<Component> ReadComponents(FileInfo input)
@@ -170,11 +176,11 @@ namespace Parfy
             }
             catch (FileNotFoundException)
             {
-                Console.WriteLine($"Файл не найден: {input.FullName}");
+                Console.WriteLine($"Файл не найден: {input.FullName}", EConsoleStatus.Error);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при чтении файла: {ex.Message}");
+                Console.WriteLine($"Ошибка при чтении файла: {ex.Message}", EConsoleStatus.Error);
             }
 
             return components;

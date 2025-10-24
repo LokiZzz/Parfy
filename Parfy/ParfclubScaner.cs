@@ -5,7 +5,7 @@ using System.Web;
 
 namespace Parfy
 {
-    public class ParfclubScaner(IConsole console)
+    public partial class ParfclubScaner(IConsole console)
     {
         private readonly HttpClient http = new();
 
@@ -139,14 +139,20 @@ namespace Parfy
             HtmlNode h1 = htmlDoc.DocumentNode
                 .SelectSingleNode("//h1[@class='woo-product-details-title product_title entry-title']");
             string decoded = HttpUtility.HtmlDecode(h1.InnerText); // Бывает кривоватое кодирование
+            component.OriginalName = decoded;
             string cleaned = decoded.Replace(" — ", "-").Replace("—", "-").Trim();
 
-            string[] parts = cleaned.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
-            string englishName = parts[0].Trim();
-            component.NameENG = englishName;
+            string[] parts = cleaned.Split(" / ", StringSplitOptions.RemoveEmptyEntries);
+            component.NameENG = parts[0].Trim();
+            component.NameRUS = parts.Length > 1 ? parts[1].Trim() : string.Empty;
 
-            string russianName = parts.Length > 1 ? parts[1].Trim() : string.Empty;
-            component.NameRUS = russianName;
+            // Если не получилось разделить, то скорее всего формат такой: «Component (вещество)»
+            if (string.IsNullOrWhiteSpace(component.NameRUS))
+            {
+                parts = cleaned.Split('(', StringSplitOptions.RemoveEmptyEntries);
+                component.NameENG = parts[0].Trim();
+                component.NameRUS = (parts.Length > 1 ? parts[1].Trim() : string.Empty).Replace(")", string.Empty);
+            }
 
             // Длинное описание с рекомендациями из вкладок внизу
             HtmlNode tab = htmlDoc.DocumentNode.SelectSingleNode("//div[@id='tab-description']");
@@ -154,7 +160,7 @@ namespace Parfy
             if (tab is not null)
             {
                 HtmlNode wrap = tab.SelectSingleNode("//div[@class='wrap']");
-                component.Description = Regex.Replace(wrap.InnerText, @"\s+", " ").Trim();
+                component.Description = Spaces().Replace(wrap.InnerText, " ").Trim();
             }
 
             // Короткое описание-таблица справа от иллюстрации
@@ -165,5 +171,8 @@ namespace Parfy
 
             return component;
         }
+
+        [GeneratedRegex(@"\s+")]
+        private static partial Regex Spaces();
     }
 }
