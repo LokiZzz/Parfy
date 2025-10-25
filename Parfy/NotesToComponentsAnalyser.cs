@@ -311,7 +311,7 @@ namespace Parfy
             foreach ((string Note, string[] Exclude) item in notesInput)
             {
                 result.Add((item.Note, item.Exclude));
-                string[] splitted = item.Note.Split('-');
+                string[] splitted = item.Note.Split(' ');
 
                 if(splitted.Length > 1)
                 {
