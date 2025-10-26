@@ -107,7 +107,7 @@ analyse.SetAction(parseResult =>
         List<(string Note, string[] Exclude)> notes = GetNotesFromParameter(parseResult.GetValue(analyseNotes)!);
         string[] bannedEntries = parseResult.GetValue(analyseBan)!;
         NotesToComponentsAnalysis result = analyser.Analyse(components, notes, excludeEntryTokens: bannedEntries);
-        csvProcessor.GenerateAnalysis(result, parseResult.GetValue(analyseOut)!);
+        //csvProcessor.GenerateAnalysis(result, parseResult.GetValue(analyseOut)!);
     }
 });
 

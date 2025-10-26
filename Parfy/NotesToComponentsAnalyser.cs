@@ -1,14 +1,12 @@
 ﻿using FuzzySharp;
 using Parfy.Model;
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace Parfy
 {
     public partial class NotesToComponentsAnalyser(IConsole console)
     {
-        private readonly int _fuzzyWeightTreshold = 70;
-        private readonly int _fuzzyWeightWindowTreshold = 70;
+        private readonly static int _fuzzyWeightTreshold = 70;
 
         /// <summary>
         /// Найти подходящие вещества
@@ -43,26 +41,29 @@ namespace Parfy
                 foreach (Component component in sourceComponents)
                 {
                     console.WriteLine($"Проверка вещества: {component.NameENG}");
-                    bool found = ComponentHasFuzzyEntries(component, item.Note, out List<string> entries);
+                    string[] exclude = excludeEntryTokens is null 
+                        ? item.Exclude
+                        : excludeEntryTokens.Union(item.Exclude).ToArray();
+                    bool found = ComponentHasEntries(
+                        component,
+                        item.Note,
+                        exclude,
+                        out List<(string Entry, int Weight)>? entries);
                     console.ClearLastLine();
 
                     if (found)
                     {
+                        IEnumerable<string> entriesText = entries.Select(x => x.Entry);
+
                         console.WriteLine(
                             $"Найдено вещество: {component.NameENG}");
                         console.WriteLine(
-                            $"-- Вхождения ({entries.Count}): {entries.Aggregate((x, y) => $"{x},{y}")}");
-
-                        if (CheckBannedEntries(entries, excludeEntryTokens)
-                            || CheckBannedEntries(entries, item.Exclude))
-                        {
-                            continue;
-                        }
+                            $"-- Вхождения ({entriesText.Count()}): {entriesText.Aggregate((x, y) => $"{x},{y}")}");
 
                         foundComponents.Add(
                             new АppropriateComponent
                             {
-                                Entries = entries,
+                                Entries = [.. entriesText],
                                 FoundComponent = component
                             }
                         );
@@ -111,49 +112,105 @@ namespace Parfy
         }
 
         /// <summary>
-        /// Проверить наличие вхождений в бане.
+        /// Определить вхождения при помощи неточного поиска
         /// </summary>
-        /// <param name="entries"></param>
-        /// <param name="exclude"></param>
-        /// <returns></returns>
-        private bool CheckBannedEntries(List<string> entries, string[]? exclude)
+        /// <param name="component">Кандидат на вещество</param>
+        /// <param name="note">Нота для поиска</param>
+        /// <param name="optimize">Если true, то сразу после нахождения вхождения выйдет из метода.</param>
+        private bool ComponentHasEntries(
+            Component component,
+            string note,
+            string[] exclude,
+            out List<(string Entry, int Weight)> entries,
+            bool optimize = false)
         {
-            if (exclude is not null && exclude.Length > 0)
-            {
-                exclude = exclude.Select(x => x.ToLower()).ToArray();
+            entries = [];
 
-                return entries.All(entry => 
-                    exclude.Any(ban => entry.Contains(ban, StringComparison.CurrentCultureIgnoreCase))
-                );
+            bool isNameENGEntry =
+                TrySearchComponent(
+                    component.NameENG,
+                    note,
+                    exclude,
+                    out List<(string Entry, int Weight)> e1, out _, out _);
+            entries.AddRange(e1);
+
+            if (isNameENGEntry && optimize)
+            {
+                return true;
             }
 
-            return false;
+            bool isNameRUSEntry =
+                TrySearchComponent(
+                    component.NameRUS,
+                    note,
+                    exclude,
+                    out List<(string Entry, int Weight)> e2, out _, out _);
+            entries.AddRange(e2);
+
+            if (isNameRUSEntry && optimize)
+            {
+                return true;
+            }
+
+            bool isShortDescEntry =
+                TrySearchComponent(
+                    component.ShortDescription,
+                    note,
+                    exclude,
+                    out List<(string Entry, int Weight)> e3, out _, out _);
+            entries.AddRange(e3);
+
+            if (isShortDescEntry && optimize)
+            {
+                return true;
+            }
+
+            bool isDescEntry =
+                TrySearchComponent(
+                    component.Description,
+                    note,
+                    exclude,
+                    out List<(string Entry, int Weight)> e4, out _, out _);
+            entries.AddRange(e4);
+
+            if (isDescEntry && optimize)
+            {
+                return true;
+            }
+
+            return isNameENGEntry || isNameRUSEntry || isShortDescEntry || isDescEntry;
         }
 
-        private bool TryToFindSynergy(
+        private static bool TryToFindSynergy(
             Component baseComponent,
             Component synergyCandidate,
             out string entry,
             out int weight)
         {
-            if (TrySearchComponent(baseComponent.Description, synergyCandidate.NameENG, out entry, out weight))
-            {
-                return true;
-            }
-            else if (TrySearchComponent(baseComponent.Description, synergyCandidate.NameRUS, out entry, out weight))
-            {
-                return true;
-            }
+            bool inENG = TrySearchComponent(
+                baseComponent.Description,
+                synergyCandidate.NameENG,
+                [],
+                out _, out entry, out weight);
 
-            return false;
+            bool inRUS = TrySearchComponent(
+                baseComponent.Description,
+                synergyCandidate.NameRUS,
+                [],
+                out _, out entry, out weight);
+
+            return inENG || inRUS;
         }
 
-        public bool TrySearchComponent(
+        public static bool TrySearchComponent(
             string largeText,
             string targetPhrase,
+            string[] exclude,
+            out List<(string Entry, int Weight)> entries,
             out string bestEntry,
             out int bestWeight)
         {
+            entries = [];
             bestEntry = string.Empty;
             bestWeight = 0;
 
@@ -182,13 +239,16 @@ namespace Parfy
                     bestEntry = window;
                 }
 
-                if (currentWindowWeight > _fuzzyWeightWindowTreshold)
+                if (currentWindowWeight > _fuzzyWeightTreshold)
                 {
-                    return true;
+                    if (!exclude.Any( x => x.Equals(window, StringComparison.CurrentCultureIgnoreCase)))
+                    {
+                        entries.Add((window, currentWindowWeight));
+                    }
                 }
             }
 
-            return false;
+            return entries.Count != 0;
         }
 
         public static string NormalizeComponentName(string name)
@@ -229,81 +289,10 @@ namespace Parfy
         }
 
         /// <summary>
-        /// Определить вхождения при помощи неточного поиска
-        /// </summary>
-        /// <param name="component">Кандидат на вещество</param>
-        /// <param name="note">Нота для поиска</param>
-        /// <param name="optimize">Если true, то сразу после нахождения вхождения выйдет из метода.</param>
-        private bool ComponentHasFuzzyEntries(
-            Component component,
-            string note,
-            out List<string> entries,
-            bool optimize = false)
-        {
-            entries = [];
-            bool isNameENGEntry = 
-                TrySearchFuzzy(component.NameENG, note, out List<string> entriesInNameENG);
-            entries.AddRange(entriesInNameENG);
-
-            if(isNameENGEntry && optimize)
-            {
-                return true;
-            }
-
-            bool isNameRUSEntry = 
-                TrySearchFuzzy(component.NameRUS, note, out List<string> entriesInNameRUS);
-            entries.AddRange(entriesInNameRUS);
-
-            if (isNameRUSEntry && optimize)
-            {
-                return true;
-            }
-
-            bool isShortDescEntry = 
-                TrySearchFuzzy(component.ShortDescription, note, out List<string> entriesInShortDescription);
-            entries.AddRange(entriesInShortDescription);
-
-            if (isShortDescEntry && optimize)
-            {
-                return true;
-            }
-
-            bool isDescEntry = 
-                TrySearchFuzzy(component.Description, note, out List<string> entriesInDescription);
-            entries.AddRange(entriesInDescription);
-
-            if (isDescEntry && optimize)
-            {
-                return true;
-            }
-
-            return isNameENGEntry || isNameRUSEntry || isShortDescEntry || isDescEntry;
-        }
-
-        private bool TrySearchFuzzy(string input, string query, out List<string> entries)
-        {
-            List<(string Entry, int Weigth)> entriesWithWeights = [];
-
-            foreach (string word in SplitByWords(input))
-            {
-                int weight = Fuzz.Ratio(word, query);
-
-                if (weight >= _fuzzyWeightTreshold)
-                {
-                    entriesWithWeights.Add((word, weight));
-                }
-            }
-
-            entries = [.. entriesWithWeights.Select(x => x.Entry)];
-
-            return entries.Count != 0;
-        }
-
-        /// <summary>
         /// Разделить через запятую, если нота — это несколько слов, то разделить по пробелу и дополнительно добавить
         /// все части в список нот.
         /// </summary>
-        private List<(string Note, string[] Exclude)> GetNormalizedNotes(
+        private static List<(string Note, string[] Exclude)> GetNormalizedNotes(
             List<(string Note, string[] Exclude)> notesInput)
         {
             List<(string Note, string[] Exclude)> result = [];
@@ -319,10 +308,10 @@ namespace Parfy
                 }
             }
 
-            return result;
+            return [.. result.Distinct()];
         }
 
-        private IEnumerable<string> SplitByWords(string input)
+        private static IEnumerable<string> SplitByWords(string input)
         {
             return input.Split(
                     [' ', ',', '.', '!', '?', ';', ':', '\n', '\r', '\t'],
