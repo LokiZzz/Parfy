@@ -41,14 +41,16 @@ namespace Parfy
                 foreach (Component component in sourceComponents)
                 {
                     console.WriteLine($"Проверка вещества: {component.NameENG}");
+
                     string[] exclude = excludeEntryTokens is null 
                         ? item.Exclude
-                        : excludeEntryTokens.Union(item.Exclude).ToArray();
+                        : [.. excludeEntryTokens.Union(item.Exclude)];
                     bool found = ComponentHasEntries(
                         component,
                         item.Note,
                         exclude,
                         out List<(string Entry, int Weight)>? entries);
+
                     console.ClearLastLine();
 
                     if (found)
@@ -85,7 +87,7 @@ namespace Parfy
 
                 foreach (Component synergyCandidate in sourceComponents)
                 {
-                    if (TryToFindSynergy(baseComponent, synergyCandidate, out string entry, out int weight)
+                    if (TryFindSynergy(baseComponent, synergyCandidate, out string entry, out int weight)
                         && !baseComponent.NameENG.Equals(synergyCandidate.NameENG))
                     {
                         console.WriteLine($"Найдена синергия: {synergyCandidate.NameENG}");
@@ -117,7 +119,7 @@ namespace Parfy
         /// <param name="component">Кандидат на вещество</param>
         /// <param name="note">Нота для поиска</param>
         /// <param name="optimize">Если true, то сразу после нахождения вхождения выйдет из метода.</param>
-        private bool ComponentHasEntries(
+        private static bool ComponentHasEntries(
             Component component,
             string note,
             string[] exclude,
@@ -127,7 +129,7 @@ namespace Parfy
             entries = [];
 
             bool isNameENGEntry =
-                TrySearchComponent(
+                TrySearch(
                     component.NameENG,
                     note,
                     exclude,
@@ -140,7 +142,7 @@ namespace Parfy
             }
 
             bool isNameRUSEntry =
-                TrySearchComponent(
+                TrySearch(
                     component.NameRUS,
                     note,
                     exclude,
@@ -153,7 +155,7 @@ namespace Parfy
             }
 
             bool isShortDescEntry =
-                TrySearchComponent(
+                TrySearch(
                     component.ShortDescription,
                     note,
                     exclude,
@@ -166,7 +168,7 @@ namespace Parfy
             }
 
             bool isDescEntry =
-                TrySearchComponent(
+                TrySearch(
                     component.Description,
                     note,
                     exclude,
@@ -181,28 +183,21 @@ namespace Parfy
             return isNameENGEntry || isNameRUSEntry || isShortDescEntry || isDescEntry;
         }
 
-        private static bool TryToFindSynergy(
-            Component baseComponent,
-            Component synergyCandidate,
+        private static bool TryFindSynergy(
+            Component component,
+            Component synergent,
             out string entry,
             out int weight)
         {
-            bool inENG = TrySearchComponent(
-                baseComponent.Description,
-                synergyCandidate.NameENG,
-                [],
-                out _, out entry, out weight);
+            if(TrySearch(component.Description, synergent.NameENG, [], out _, out entry, out weight))
+            {
+                return true;
+            }
 
-            bool inRUS = TrySearchComponent(
-                baseComponent.Description,
-                synergyCandidate.NameRUS,
-                [],
-                out _, out entry, out weight);
-
-            return inENG || inRUS;
+            return TrySearch(component.Description, synergent.NameRUS, [], out _, out entry, out weight);
         }
 
-        public static bool TrySearchComponent(
+        public static bool TrySearch(
             string largeText,
             string targetPhrase,
             string[] exclude,
@@ -289,8 +284,8 @@ namespace Parfy
         }
 
         /// <summary>
-        /// Разделить через запятую, если нота — это несколько слов, то разделить по пробелу и дополнительно добавить
-        /// все части в список нот.
+        /// Разделить через запятую, если нота — это несколько слов, 
+        /// то разделить по пробелу и дополнительно добавить все части в список нот.
         /// </summary>
         private static List<(string Note, string[] Exclude)> GetNormalizedNotes(
             List<(string Note, string[] Exclude)> notesInput)
@@ -311,12 +306,10 @@ namespace Parfy
             return [.. result.Distinct()];
         }
 
-        private static IEnumerable<string> SplitByWords(string input)
-        {
-            return input.Split(
-                    [' ', ',', '.', '!', '?', ';', ':', '\n', '\r', '\t'],
-                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        }
+        private static IEnumerable<string> SplitByWords(string input) => 
+            input.Split(
+                [' ', ',', '.', '!', '?', ';', ':', '\n', '\r', '\t'],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         [GeneratedRegex(@"[^а-яёa-z ]", RegexOptions.IgnoreCase, "ru-RU")]
         private static partial Regex NonLetters();

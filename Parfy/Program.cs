@@ -84,8 +84,8 @@ Option<string[]> analyseBan = new("--ban")
 { 
     Required = false,
     Description = "Список забаненых вхождений для всей композиции.",
-    DefaultValueFactory = parseValue => ["аромат", "как", "не", "формат", "тот", "том", "как", "каркас",
-        "грань", "грани", "каком"]
+    DefaultValueFactory = parseValue => 
+        ["аромат", "как", "не", "формат", "тот", "том", "как", "каркас", "грань", "грани", "каком"]
 };
 analyse.Options.Add(analyseBan);
 
@@ -107,7 +107,7 @@ analyse.SetAction(parseResult =>
         List<(string Note, string[] Exclude)> notes = GetNotesFromParameter(parseResult.GetValue(analyseNotes)!);
         string[] bannedEntries = parseResult.GetValue(analyseBan)!;
         NotesToComponentsAnalysis result = analyser.Analyse(components, notes, excludeEntryTokens: bannedEntries);
-        //csvProcessor.GenerateAnalysis(result, parseResult.GetValue(analyseOut)!);
+        csvProcessor.GenerateAnalysis(result, parseResult.GetValue(analyseOut)!);
     }
 });
 

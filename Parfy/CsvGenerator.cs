@@ -95,7 +95,7 @@ namespace Parfy
             if (analysis.Synergies.Count > 0)
             {
                 IEnumerable<IGrouping<string, Synergy>> groupsByName = analysis.Synergies.First()
-                    .Value.GroupBy(x => x.Source.NameENG);
+                    .Value.GroupBy(x => x.Source.OriginalName);
 
                 foreach (IGrouping<string, Synergy> group in groupsByName)
                 {

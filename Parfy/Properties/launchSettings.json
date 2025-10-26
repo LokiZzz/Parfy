@@ -2,7 +2,7 @@
   "profiles": {
     "Parfy": {
       "commandName": "Project",
-      "commandLineArgs": "analyse --notes=\"чёрный перец\"",
+      "commandLineArgs": "analyse --notes=\"кофе -коже, грибы, чёрный перец  -перед, красный перец, лаванда -ландыш -ладан, томат, ветивер, гваяк, какао, мох, герань\"",
       "workingDirectory": "C:\\Users\\lokiz\\OneDrive\\Рабочий стол"
     }
   }
