@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <PackAsTool>True</PackAsTool>
     <ToolCommandName>parfy</ToolCommandName>
+	<PackageOutputPath>./nupkg</PackageOutputPath>
   </PropertyGroup>
 
   <ItemGroup>

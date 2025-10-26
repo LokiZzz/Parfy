@@ -40,7 +40,7 @@ namespace Parfy
 
                 foreach (Component component in sourceComponents)
                 {
-                    console.WriteLine($"Проверка вещества: {component.NameENG}");
+                    console.WriteLine($"Проверка вещества: {component.OriginalName}");
 
                     string[] exclude = excludeEntryTokens is null 
                         ? item.Exclude
@@ -58,7 +58,7 @@ namespace Parfy
                         IEnumerable<string> entriesText = entries.Select(x => x.Entry);
 
                         console.WriteLine(
-                            $"Найдено вещество: {component.NameENG}");
+                            $"Найдено вещество: {component.OriginalName}");
                         console.WriteLine(
                             $"-- Вхождения ({entriesText.Count()}): {entriesText.Aggregate((x, y) => $"{x},{y}")}");
 
@@ -83,14 +83,14 @@ namespace Parfy
 
             foreach (Component baseComponent in allFoundComponents)
             {
-                console.WriteLine($"\nПоиск синергии для {baseComponent.NameENG}");
+                console.WriteLine($"\nПоиск синергии для {baseComponent.OriginalName}");
 
                 foreach (Component synergyCandidate in sourceComponents)
                 {
                     if (TryFindSynergy(baseComponent, synergyCandidate, out string entry, out int weight)
                         && !baseComponent.NameENG.Equals(synergyCandidate.NameENG))
                     {
-                        console.WriteLine($"Найдена синергия: {synergyCandidate.NameENG}");
+                        console.WriteLine($"Найдена синергия: {synergyCandidate.OriginalName}");
                         console.WriteLine($"-- Вхождение: {entry}, вес вхождения: {weight}");
 
                         synergies.Add(
