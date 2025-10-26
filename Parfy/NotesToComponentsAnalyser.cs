@@ -183,7 +183,7 @@ namespace Parfy
             return isNameENGEntry || isNameRUSEntry || isShortDescEntry || isDescEntry;
         }
 
-        private static bool TryFindSynergy(
+        public static bool TryFindSynergy(
             Component component,
             Component synergent,
             out string entry,
@@ -234,7 +234,7 @@ namespace Parfy
                     bestEntry = window;
                 }
 
-                if (currentWindowWeight > _fuzzyWeightTreshold)
+                if (currentWindowWeight >= _fuzzyWeightTreshold)
                 {
                     if (!exclude.Any( x => x.Equals(window, StringComparison.CurrentCultureIgnoreCase)))
                     {
